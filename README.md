@@ -45,7 +45,6 @@ pip install streamlit opencv-python-headless numpy Pillow facenet-pytorch yt-dlp
 ```bash
 streamlit run app.py
 ```
-
 ---
 
 This project is like a **smart photo taker from videos**.  
@@ -63,5 +62,19 @@ You can use any YouTube video or your own.
 - Pick clear face shots for face recognition datasets  
 - Collect stable thumbnails from video lectures  
 - Automatically filter out blurry or shaky scenes
+
+---
+
+## 🖼️ Sample Results
+
+Here are a few clean frames automatically extracted from the **Rajasaab Teaser** on YouTube using this app:
+
+| Frame 1 | Frame 2 | Frame 3 |
+|--------|---------|--------|
+| ![frame1](assets/frame1.png) | ![frame2](assets/frame2.png) | ![frame3](assets/frame3.png) |
+
+> These frames were chosen by the app because they contain faces and are not blurry or shaky.
+
+
 
 
