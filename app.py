@@ -1,6 +1,3 @@
-# app.py
-
-import streamlit as st
 import tempfile
 import os
 import cv2
@@ -10,10 +7,6 @@ from facenet_pytorch import MTCNN
 import torch
 import yt_dlp
 from skimage.metrics import structural_similarity as ssim
-
-# Configure Streamlit page
-st.set_page_config(page_title="Video Frame Extractor", layout="wide")
-st.title("Video Frame Extractor (Faces + Motion Filtering)")
 
 # -------------------------- Function Definitions --------------------------
 
@@ -36,18 +29,16 @@ def download_youtube_video(url: str) -> str:
         ydl.download([url])
     return output_path.replace("%(ext)s", "mp4")
 
-
-def save_uploaded_video(uploaded_file) -> str:
+def save_uploaded_video(uploaded_file_path: str) -> str:
     """
     Saves a user-uploaded video file to a temporary directory.
     - Returns the full file path where the video is saved.
     """
     temp_dir = tempfile.mkdtemp()
-    video_path = os.path.join(temp_dir, uploaded_file.name)
-    with open(video_path, "wb") as f:
-        f.write(uploaded_file.read())
+    video_path = os.path.join(temp_dir, os.path.basename(uploaded_file_path))
+    with open(uploaded_file_path, "rb") as src, open(video_path, "wb") as dst:
+        dst.write(src.read())
     return video_path
-
 
 def load_video_metadata(video_path: str) -> tuple:
     """
@@ -60,7 +51,6 @@ def load_video_metadata(video_path: str) -> tuple:
     duration = total_frames / fps
     cap.release()
     return total_frames, fps, duration
-
 
 def extract_frames_with_faces_and_motion_filter(
     video_path: str,
@@ -124,48 +114,33 @@ def extract_frames_with_faces_and_motion_filter(
     cap.release()
     return frames_with_faces
 
-# -------------------------- UI Logic --------------------------
+# -------------------------- Example Usage --------------------------
 
-video_path = None
-option = st.radio("Select video source:", ["YouTube URL", "Upload Video"])
+if __name__ == "__main__":
+    # You can use any one vedio_path according to your wish
+    # Example: Download from YouTube
+    video_path = download_youtube_video("https://youtube.com/your-video-link")
 
-if option == "YouTube URL":
-    video_url = st.text_input("Paste a YouTube video URL:")
-    if video_url:
-        with st.spinner("Downloading video..."):
-            try:
-                video_path = download_youtube_video(video_url)
-                st.success("Video downloaded successfully")
-            except Exception as e:
-                st.error(f"Download error: {e}")
+    # OR use a local file
+    video_path = save_uploaded_video("/path/to/your/video.mp4")
 
-elif option == "Upload Video":
-    uploaded_file = st.file_uploader("Upload a video", type=["mp4", "avi", "mov"])
-    if uploaded_file:
-        video_path = save_uploaded_video(uploaded_file)
-        st.success("Video uploaded successfully")
-
-# -------------------------- Frame Extraction --------------------------
-
-if video_path:
-    st.video(video_path)
-
+    # Load metadata
     total_frames, fps, duration = load_video_metadata(video_path)
-    st.info(f"Duration: {duration:.2f} seconds | FPS: {fps:.2f} | Total Frames: {total_frames}")
+    print(f"Video Info → Duration: {duration:.2f}s | FPS: {fps:.2f} | Total Frames: {total_frames}")
 
-    time_range = st.slider("Select time range (seconds)", 0.0, duration, (0.0, duration), step=0.1)
-    time_gap = st.number_input("Frame interval (seconds)", min_value=0.01, value=0.5, step=0.01)
+    # Extract stable face-containing frames
+    frames = extract_frames_with_faces_and_motion_filter(
+        video_path=video_path,
+        start_time=0,
+        end_time=duration,
+        time_gap=1
+    )
 
-    if st.button("Extract Frames (Faces + Stable Only)"):
-        with st.spinner("Processing video..."):
-            frames = extract_frames_with_faces_and_motion_filter(
-                video_path=video_path,
-                start_time=time_range[0],
-                end_time=time_range[1],
-                time_gap=time_gap,
-                motion_threshold=0.80
-            )
-            st.success(f"Extracted {len(frames)} stable frames with faces")
+    print(f"Extracted {len(frames)} stable frames with faces")
 
-            for t, img in frames:
-                st.image(img, caption=f"Time: {t:.2f} seconds", use_container_width=True)
+    # Save extracted frames as images
+    for t, img in frames:
+        save_path = f"frame_at_{t:.2f}_sec.jpg"
+        img.save(save_path)
+        print(f"Saved {save_path}")
+
